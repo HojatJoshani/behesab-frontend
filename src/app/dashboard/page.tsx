@@ -3,37 +3,41 @@
 import { useEffect, useState } from 'react';
 
 export default function DashboardPage() {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<any>(null);
+  const [error, setError] = useState<string>('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-
-    async function fetchUser() {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/me`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setUser(data.user);
-      } else {
-        console.log('Not authorized');
-      }
+    if (!token) {
+      setError('No token found. Please login first.');
+      return;
     }
 
-    if (token) fetchUser();
+    fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/users/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Unauthorized or fetch failed');
+        return res.json();
+      })
+      .then(data => setUser(data))
+      .catch(err => setError(err.message));
   }, []);
 
   return (
     <div className="p-4">
-      <h1 className="text-xl font-bold">داشبورد</h1>
+      <h1 className="text-xl font-bold mb-4">Dashboard</h1>
+      {error && <p className="text-red-600">Error: {error}</p>}
       {user ? (
-        <p>خوش اومدی {user.email}</p>
-      ) : (
-        <p>در حال بارگذاری اطلاعات کاربر...</p>
-      )}
+        <div>
+          <p><strong>Name:</strong> {user.name}</p>
+          <p><strong>Email:</strong> {user.email}</p>
+        </div>
+      ) : !error ? (
+        <p>Loading...</p>
+      ) : null}
     </div>
   );
 }
